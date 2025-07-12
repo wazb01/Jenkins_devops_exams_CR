@@ -3,15 +3,5 @@ kind: ConfigMap
 metadata:
   name: nginx-config
 data:
-  nginx.conf: |
-    server {
-      listen 8888;
-
-      location /api/v1/movies {
-        proxy_pass http:/0.0.0.0:8000/api/v1/movies;
-      }
-
-      location /api/v1/casts {
-        proxy_pass http://0.0.0.0:8000/api/v1/casts;
-      }
-    }
+  default.conf: |
+{{ .Files.Get "nginx_config.conf" | indent 4 }}
