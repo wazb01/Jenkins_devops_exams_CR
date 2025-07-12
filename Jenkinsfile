@@ -41,10 +41,10 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to dev') {
             when {
                 expression {
-                    return env.BRANCH_NAME in ['qa', 'staging', 'dev'] || env.GIT_BRANCH in ['qa', 'staging', 'dev'] || env.GIT_BRANCH in ['origin/qa', 'origin/staging', 'origin/dev']
+                    return env.BRANCH_NAME == 'dev' || env.GIT_BRANCH == 'dev' || env.GIT_BRANCH == 'origin/dev'
                 }
             }
             environment {
@@ -57,7 +57,51 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    helm upgrade --install app-${BRANCH_NAME} ./helm-chart --namespace ${BRANCH_NAME} --create-namespace
+                    helm upgrade --install app-dev ./helm-chart --namespace dev --create-namespace
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to qa') {
+            when {
+                expression {
+                    return env.BRANCH_NAME == 'qa' || env.GIT_BRANCH == 'qa' || env.GIT_BRANCH == 'origin/qa'
+                }
+            }
+            environment {
+                KUBECONFIG = credentials("config")
+            }
+            steps {
+                script {
+                    sh '''
+                    rm -Rf .kube
+                    mkdir .kube
+                    cat $KUBECONFIG > .kube/config
+
+                    helm upgrade --install app-qa ./helm-chart --namespace qa --create-namespace
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to staging') {
+            when {
+                expression {
+                    return env.BRANCH_NAME == 'staging' || env.GIT_BRANCH == 'staging' || env.GIT_BRANCH == 'origin/staging'
+                }
+            }
+            environment {
+                KUBECONFIG = credentials("config")
+            }
+            steps {
+                script {
+                    sh '''
+                    rm -Rf .kube
+                    mkdir .kube
+                    cat $KUBECONFIG > .kube/config
+
+                    helm upgrade --install app-staging ./helm-chart --namespace staging --create-namespace
                     '''
                 }
             }
@@ -83,7 +127,7 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    helm upgrade --install app-${BRANCH_NAME} ./helm-chart --namespace ${BRANCH_NAME} --create-namespace
+                    helm upgrade --install app-prod ./helm-chart --namespace prod --create-namespace
                     '''
                 }
             }
