@@ -28,7 +28,7 @@ spec:
       containers:
         - args:
             - uvicorn
-            - app.main:app
+            - main:app
             - --reload
             - --host
             - 0.0.0.0
