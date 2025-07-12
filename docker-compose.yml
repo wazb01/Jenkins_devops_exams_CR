@@ -1,155 +1,59 @@
-pipeline {
-    environment {
-        DOCKER_ID = "cliffrubio"
-        DOCKER_TAG = "v${BUILD_ID}"
-    }
+version: '3.7'
 
-    agent any
+services:
+  movie_service:
+    build: ./movie-service
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    volumes:
+      - ./movie-service/:/app/
+    ports:
+      - 8001:8000
+    environment:
+      - DATABASE_URI=postgresql://movie_db_username:movie_db_password@movie_db/movie_db_dev
+      - CAST_SERVICE_HOST_URL=http://cast_service:8000/api/v1/casts/
+    depends_on:
+      - movie_db
 
-    stages {
-        stage('Docker build - Cast service') {
-            steps {
-                sh '''
-                docker build -t $DOCKER_ID/cast-service:$DOCKER_TAG cast-service/
-                '''
-            }
-        }
+  movie_db:
+    image: postgres:12.1-alpine
+    volumes:
+      - postgres_data_movie:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=movie_db_username
+      - POSTGRES_PASSWORD=movie_db_password
+      - POSTGRES_DB=movie_db_dev
 
-        stage('Docker push - Cast service') {
-            environment {
-                DOCKER_PASS = credentials("DOCKER_HUB_PASS")
-            }
-            steps {
-                sh '''
-                docker login -u $DOCKER_ID -p $DOCKER_PASS
-                docker push $DOCKER_ID/cast-service:$DOCKER_TAG
-                '''
-            }
-        }
+  cast_service:
+    build: ./cast-service
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    volumes:
+      - ./cast-service/:/app/
+    ports:
+      - 8002:8000
+    environment:
+      - DATABASE_URI=postgresql://cast_db_username:cast_db_password@cast_db/cast_db_dev
+    depends_on:
+      - cast_db
 
-        stage('Docker build - Movie service') {
-            steps {
-                sh '''
-                docker build -t $DOCKER_ID/movie-service:$DOCKER_TAG movie-service/
+  cast_db:
+    image: postgres:12.1-alpine
+    volumes:
+      - postgres_data_cast:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=cast_db_username
+      - POSTGRES_PASSWORD=cast_db_password
+      - POSTGRES_DB=cast_db_dev
 
-                '''
-            }
-        }
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx_config.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - cast_service
+      - movie_service
 
-        stage('Docker push - Movie service') {
-            environment {
-                DOCKER_PASS = credentials("DOCKER_HUB_PASS")
-            }
-            steps {
-                sh '''
-                docker login -u $DOCKER_ID -p $DOCKER_PASS
-                docker push $DOCKER_ID/movie-service:$DOCKER_TAG
-                '''
-            }
-        }
-
-        stage('Deploy to dev') {
-            when {
-                expression {
-                    return env.BRANCH_NAME == 'dev' || env.GIT_BRANCH == 'dev' || env.GIT_BRANCH == 'origin/dev'
-                }
-            }
-            environment {
-                KUBECONFIG = credentials("config")
-            }
-            steps {
-                script {
-                    sh '''
-                    rm -Rf .kube
-                    mkdir .kube
-                    cat $KUBECONFIG > .kube/config
-
-                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30007
-                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30008
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to qa') {
-            when {
-                expression {
-                    return env.BRANCH_NAME == 'qa' || env.GIT_BRANCH == 'qa' || env.GIT_BRANCH == 'origin/qa'
-                }
-            }
-            environment {
-                KUBECONFIG = credentials("config")
-            }
-            steps {
-                script {
-                    sh '''
-                    rm -Rf .kube
-                    mkdir .kube
-                    cat $KUBECONFIG > .kube/config
-
-                    helm upgrade --install cast charts/ --namespace qa --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30017
-                    helm upgrade --install movie charts/ --namespace qa --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30018
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to staging') {
-            when {
-                expression {
-                    return env.BRANCH_NAME == 'staging' || env.GIT_BRANCH == 'staging' || env.GIT_BRANCH == 'origin/staging'
-                }
-            }
-            environment {
-                KUBECONFIG = credentials("config")
-            }
-            steps {
-                script {
-                    sh '''
-                    rm -Rf .kube
-                    mkdir .kube
-                    cat $KUBECONFIG > .kube/config
-
-                    helm upgrade --install cast charts/ --namespace staging --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30027
-                    helm upgrade --install movie charts/ --namespace staging --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30028
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to prod') {
-            when {
-                expression {
-                    return env.BRANCH_NAME == 'master' || env.GIT_BRANCH == 'master' || env.GIT_BRANCH == 'origin/master'
-                }
-            }
-            environment {
-                KUBECONFIG = credentials("config")
-            }
-            steps {
-                timeout(time: 15, unit: 'MINUTES') {
-                    input message: 'Do you want to deploy in production ?', ok: 'Yes'
-                }
-
-                script {
-                    sh '''
-                    rm -Rf .kube
-                    mkdir .kube
-                    cat $KUBECONFIG > .kube/config
-
-                    helm upgrade --install cast charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30037
-                    helm upgrade --install movie charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30038
-                    '''
-                }
-            }
-        }
-    }
-
-    post {
-        failure {
-            mail to: 'cliffrubio.dev@gmail.com',
-                subject: "${env.JOB_NAME} - Build # ${env.BUILD_ID} has failed",
-                body: "For more info on the pipeline failure, check out the console output at ${env.BUILD_URL}"
-        }
-    }
-}
+volumes:
+  postgres_data_movie:
+  postgres_data_cast:
