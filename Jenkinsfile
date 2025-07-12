@@ -2,7 +2,7 @@ pipeline {
     environment {
         DOCKER_ID = "cliffrubio"
         DOCKER_TAG = "v${BUILD_ID}"
-
+        BRANCH_NAME = env.BRANCH_NAME ?: (env.GIT_BRANCH?.replaceFirst(/^origin\//, '') ?: '')
     }
 
     agent any
@@ -50,6 +50,11 @@ pipeline {
         }
 
         stage('Deploy to dev') {
+            when {
+                expression {
+                    return env.BRANCH_NAME == 'dev'
+                }
+            }
             environment {
                 KUBECONFIG = credentials("config")
             }
@@ -68,6 +73,11 @@ pipeline {
         }
 
         stage('Deploy to qa') {
+            when {
+                expression {
+                    return env.BRANCH_NAME == 'qa'
+                }
+            }
             environment {
                 KUBECONFIG = credentials("config")
             }
@@ -86,6 +96,11 @@ pipeline {
         }
 
         stage('Deploy to staging') {
+            when {
+                expression {
+                    return env.BRANCH_NAME == 'staging'
+                }
+            }
             environment {
                 KUBECONFIG = credentials("config")
             }
@@ -106,7 +121,7 @@ pipeline {
         stage('Deploy to prod') {
             when {
                 expression {
-                    return env.BRANCH_NAME == 'master' || env.GIT_BRANCH == 'master' || env.GIT_BRANCH == 'origin/master'
+                    return env.BRANCH_NAME == 'master'
                 }
             }
             environment {
