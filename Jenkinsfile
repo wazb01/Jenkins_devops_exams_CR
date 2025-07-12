@@ -1,57 +1,52 @@
 pipeline {
+    agent any
+
     environment {
         DOCKER_ID = "cliffrubio"
         DOCKER_TAG = "v${BUILD_ID}"
     }
 
-    agent any
-
     stages {
-        stage('Docker build - Cast service') {
+        stage('Docker build & push - Cast service') {
+            environment {
+                DOCKER_PASS = credentials("DOCKER_HUB_PASS")
+            }
             steps {
                 sh '''
                 docker build -t $DOCKER_ID/cast-service:$DOCKER_TAG cast-service/
+                docker tag $DOCKER_ID/cast-service:$DOCKER_TAG $DOCKER_ID/cast-service:latest
+
+                docker login -u $DOCKER_ID -p $DOCKER_PASS
+
+                docker push $DOCKER_ID/cast-service:$DOCKER_TAG
+                docker push $DOCKER_ID/cast-service:latest
                 '''
             }
         }
 
-        stage('Docker push - Cast service') {
+        stage('Docker build & push - Movie service') {
             environment {
                 DOCKER_PASS = credentials("DOCKER_HUB_PASS")
             }
-            steps {
-                sh '''
-                docker login -u $DOCKER_ID -p $DOCKER_PASS
-                docker push $DOCKER_ID/cast-service:$DOCKER_TAG
-                '''
-            }
-        }
-
-        stage('Docker build - Movie service') {
             steps {
                 sh '''
                 docker build -t $DOCKER_ID/movie-service:$DOCKER_TAG movie-service/
+                docker tag $DOCKER_ID/movie-service:$DOCKER_TAG $DOCKER_ID/movie-service:latest
 
-                '''
-            }
-        }
-
-        stage('Docker push - Movie service') {
-            environment {
-                DOCKER_PASS = credentials("DOCKER_HUB_PASS")
-            }
-            steps {
-                sh '''
                 docker login -u $DOCKER_ID -p $DOCKER_PASS
+
                 docker push $DOCKER_ID/movie-service:$DOCKER_TAG
+                docker push $DOCKER_ID/movie-service:latest
                 '''
             }
         }
 
-        stage('Deploy to dev') {
+        stage('Deploy') {
             when {
                 expression {
-                    return env.BRANCH_NAME == 'dev' || env.GIT_BRANCH == 'dev' || env.GIT_BRANCH == 'origin/dev'
+                    return env.BRANCH_NAME in ['qa', 'staging', 'dev']
+                    || env.GIT_BRANCH in ['qa', 'staging', 'dev']
+                    || env.GIT_BRANCH in ['origin/qa', 'origin/staging', 'origin/dev']
                 }
             }
             environment {
@@ -64,54 +59,7 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30007
-                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30008
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to qa') {
-            when {
-                expression {
-                    return env.BRANCH_NAME == 'qa' || env.GIT_BRANCH == 'qa' || env.GIT_BRANCH == 'origin/qa'
-                }
-            }
-            environment {
-                KUBECONFIG = credentials("config")
-            }
-            steps {
-                script {
-                    sh '''
-                    rm -Rf .kube
-                    mkdir .kube
-                    cat $KUBECONFIG > .kube/config
-
-                    helm upgrade --install cast charts/ --namespace qa --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30017
-                    helm upgrade --install movie charts/ --namespace qa --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30018
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to staging') {
-            when {
-                expression {
-                    return env.BRANCH_NAME == 'staging' || env.GIT_BRANCH == 'staging' || env.GIT_BRANCH == 'origin/staging'
-                }
-            }
-            environment {
-                KUBECONFIG = credentials("config")
-            }
-            steps {
-                script {
-                    sh '''
-                    rm -Rf .kube
-                    mkdir .kube
-                    cat $KUBECONFIG > .kube/config
-
-                    helm upgrade --install cast charts/ --namespace staging --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30027
-                    helm upgrade --install movie charts/ --namespace staging --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30028
+                    helm upgrade --install app-${BRANCH_NAME} ./helm-chart --namespace ${BRANCH_NAME} --create-namespace
                     '''
                 }
             }
@@ -120,7 +68,9 @@ pipeline {
         stage('Deploy to prod') {
             when {
                 expression {
-                    return env.BRANCH_NAME == 'master' || env.GIT_BRANCH == 'master' || env.GIT_BRANCH == 'origin/master'
+                    return env.BRANCH_NAME == 'master'
+                    || env.GIT_BRANCH == 'master'
+                    || env.GIT_BRANCH == 'origin/master'
                 }
             }
             environment {
@@ -137,8 +87,7 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    helm upgrade --install cast charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30037
-                    helm upgrade --install movie charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30038
+                    helm upgrade --install app-${BRANCH_NAME} ./helm-chart --namespace ${BRANCH_NAME} --create-namespace
                     '''
                 }
             }
