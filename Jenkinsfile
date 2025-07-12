@@ -1,36 +1,39 @@
 pipeline {
     environment {
         DOCKER_ID = "cliffrubio"
-        DOCKER_IMAGE = "fastapiapp-jenkins"
         DOCKER_TAG = "v${BUILD_ID}"
-        BRANCH_NAME = "${env.GIT_BRANCH}".replace('origin/', '')
     }
 
     agent any
 
     stages {
-        stage('Docker Build') {
-            steps {
-                script {
-                    sh '''
-                        docker rm -f jenkins
-                        docker build -t $DOCKER_ID/$DOCKER_IMAGE:$DOCKER_TAG .
-                    '''
-                }
-            }
-        }
-
-        stage('Docker Push') {
+        stage('Docker build & push - Cast Service') {
             environment {
                 DOCKER_PASS = credentials("DOCKER_HUB_PASS")
             }
             steps {
-                script {
-                    sh '''
-                        docker login -u $DOCKER_ID -p $DOCKER_PASS
-                        docker push $DOCKER_ID/$DOCKER_IMAGE:$DOCKER_TAG
-                    '''
-                }
+                sh '''
+                docker build -t $DOCKER_ID/cast-service:$DOCKER_TAG -t $DOCKER_ID/cast-service:latest cast-service/
+
+                docker login -u $DOCKER_ID -p $DOCKER_PASS
+                docker push $DOCKER_ID/cast-service:$DOCKER_TAG
+                docker push $DOCKER_ID/cast-service:latest
+                '''
+            }
+        }
+
+        stage('Docker build & push - Movie Service') {
+            environment {
+                DOCKER_PASS = credentials("DOCKER_HUB_PASS")
+            }
+            steps {
+                sh '''
+                docker build -t $DOCKER_ID/movie-service:$DOCKER_TAG -t $DOCKER_ID/cast-service:latest cast-service/
+
+                docker login -u $DOCKER_ID -p $DOCKER_PASS
+                docker push $DOCKER_ID/movie-service:$DOCKER_TAG
+                docker push $DOCKER_ID/movie-service:latest
+                '''
             }
         }
 
@@ -45,11 +48,8 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    cp charts/values.yaml values.yaml
-                    sed -i "s|repository:.*|repository: $DOCKER_ID/$DOCKER_IMAGE|" values.yaml
-                    sed -i "s|tag:.*|tag: $DOCKER_TAG|" values.yaml
-
-                    helm upgrade --install myapp charts/ --values values.yaml --namespace dev --create-namespace
+                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG
+                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG
                     '''
                 }
             }
@@ -66,11 +66,8 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    cp charts/values.yaml values.yaml
-                    sed -i "s|repository:.*|repository: $DOCKER_ID/$DOCKER_IMAGE|" values.yaml
-                    sed -i "s|tag:.*|tag: $DOCKER_TAG|" values.yaml
-
-                    helm upgrade --install myapp charts/ --values values.yaml --namespace qa --create-namespace
+                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG
+                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG
                     '''
                 }
             }
@@ -87,11 +84,8 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    cp charts/values.yaml values.yaml
-                    sed -i "s|repository:.*|repository: $DOCKER_ID/$DOCKER_IMAGE|" values.yaml
-                    sed -i "s|tag:.*|tag: $DOCKER_TAG|" values.yaml
-
-                    helm upgrade --install myapp charts/ --values values.yaml --namespace staging --create-namespace
+                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG
+                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG
                     '''
                 }
             }
@@ -115,11 +109,8 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    cp charts/values.yaml values.yaml
-                    sed -i "s|repository:.*|repository: $DOCKER_ID/$DOCKER_IMAGE|" values.yaml
-                    sed -i "s|tag:.*|tag: $DOCKER_TAG|" values.yaml
-
-                    helm upgrade --install myapp charts/ --values values.yaml --namespace prod --create-namespace
+                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG
+                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG
                     '''
                 }
             }
