@@ -26,15 +26,7 @@ spec:
         io.kompose.service: movie-service
     spec:
       containers:
-        - args:
-            - uvicorn
-            - main:app
-            - --reload
-            - --host
-            - 0.0.0.0
-            - --port
-            - "8000"
-          env:
+        - env:
             - name: CAST_SERVICE_HOST_URL
               value: http://cast_service:8000/api/v1/casts/
             - name: DATABASE_URI
