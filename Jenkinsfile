@@ -137,8 +137,15 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    helm upgrade --install cast charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30037
-                    helm upgrade --install movie charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30038
+                    helm upgrade --install cast charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30037 \
+                    --set env[0].name=DATABASE_URI \
+                    --set env[0].value=postgresql://cast_db_username:cast_db_password@cast_db/cast_db_dev
+
+                    helm upgrade --install movie charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30038 \
+                    --set env[0].name=DATABASE_URI \
+                    --set env[0].value=postgresql://movie_db_username:movie_db_password@movie_db/movie_db_dev \
+                    --set env[1].name=CAST_SERVICE_HOST_URL \
+                    --set env[1].value=http://cast_service:8000/api/v1/casts/
                     '''
                 }
             }
