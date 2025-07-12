@@ -1,0 +1,6 @@
+cast:
+  image: cliffrubio/cast-service
+  tag: latest
+movie:
+  image: cliffrubio/movie-service
+  tag: latest
