@@ -10,7 +10,7 @@ pipeline {
         stage('Docker build - Cast service') {
             steps {
                 sh '''
-                docker build -t $DOCKER_ID/cast-service:$DOCKER_TAG -t $DOCKER_ID/cast-service:latest cast-service/
+                docker build -t $DOCKER_ID/cast-service:$DOCKER_TAG cast-service/
                 '''
             }
         }
@@ -23,7 +23,6 @@ pipeline {
                 sh '''
                 docker login -u $DOCKER_ID -p $DOCKER_PASS
                 docker push $DOCKER_ID/cast-service:$DOCKER_TAG
-                docker push $DOCKER_ID/cast-service:latest
                 '''
             }
         }
@@ -31,7 +30,8 @@ pipeline {
         stage('Docker build - Movie service') {
             steps {
                 sh '''
-                docker build -t $DOCKER_ID/movie-service:$DOCKER_TAG -t $DOCKER_ID/movie-service:latest movie-service/
+                docker build -t $DOCKER_ID/movie-service:$DOCKER_TAG movie-service/
+
                 '''
             }
         }
@@ -44,7 +44,6 @@ pipeline {
                 sh '''
                 docker login -u $DOCKER_ID -p $DOCKER_PASS
                 docker push $DOCKER_ID/movie-service:$DOCKER_TAG
-                docker push $DOCKER_ID/movie-service:latest
                 '''
             }
         }
@@ -60,8 +59,8 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG
-                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG
+                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30007
+                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30008
                     '''
                 }
             }
@@ -78,8 +77,8 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG
-                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG
+                    helm upgrade --install cast charts/ --namespace qa --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30007
+                    helm upgrade --install movie charts/ --namespace qa --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30008
                     '''
                 }
             }
@@ -96,8 +95,8 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG
-                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG
+                    helm upgrade --install cast charts/ --namespace staging --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30007
+                    helm upgrade --install movie charts/ --namespace staging --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30008
                     '''
                 }
             }
@@ -121,8 +120,8 @@ pipeline {
                     mkdir .kube
                     cat $KUBECONFIG > .kube/config
 
-                    helm upgrade --install cast charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG
-                    helm upgrade --install movie charts/ --namespace dev --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG
+                    helm upgrade --install cast charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/cast-service --set image.tag=$DOCKER_TAG --set service.nodePort=30007
+                    helm upgrade --install movie charts/ --namespace prod --create-namespace --set image.repository=$DOCKER_ID/movie-service --set image.tag=$DOCKER_TAG --set service.nodePort=30008
                     '''
                 }
             }
