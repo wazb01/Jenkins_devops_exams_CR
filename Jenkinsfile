@@ -48,6 +48,18 @@ pipeline {
             }
         }
 
+        stage('Test with docker-compose') {
+            steps {
+                sh '''
+                docker-compose -f docker-compose.yml up -d
+                sleep 10
+                curl http://localhost:8001/api/v1/movies
+                curl http://localhost:8002/api/v1/casts
+                docker-compose -f docker-compose.yml down
+                '''
+            }
+        }
+
         stage('Deploy to dev') {
             when {
                 expression {
