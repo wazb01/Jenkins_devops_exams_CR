@@ -38,6 +38,9 @@ spec:
               name: nginx-claim0
       restartPolicy: Always
       volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
         - name: nginx-claim0
           persistentVolumeClaim:
             claimName: nginx-claim0
