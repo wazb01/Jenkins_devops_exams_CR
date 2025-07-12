@@ -26,7 +26,8 @@ spec:
         io.kompose.service: cast-service
     spec:
       containers:
-        - env:
+        - command: sh -c "uvicorn app.main:app --reload --host 0.0.0.0"
+          env:
             - name: DATABASE_URI
               value: postgresql://cast_db_username:cast_db_password@cast_db/cast_db_dev
           image: "{{ .Values.cast.image }}:{{ .Values.cast.tag }}"

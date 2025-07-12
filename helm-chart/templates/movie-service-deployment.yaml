@@ -26,7 +26,8 @@ spec:
         io.kompose.service: movie-service
     spec:
       containers:
-        - env:
+        - command: sh -c "uvicorn app.main:app --reload --host 0.0.0.0"
+          env:
             - name: CAST_SERVICE_HOST_URL
               value: http://cast_service:8000/api/v1/casts/
             - name: DATABASE_URI
