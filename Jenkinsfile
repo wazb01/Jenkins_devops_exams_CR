@@ -49,7 +49,7 @@ pipeline {
                     sed -i "s|repository:.*|repository: $DOCKER_ID/$DOCKER_IMAGE|" values.yaml
                     sed -i "s|tag:.*|tag: $DOCKER_TAG|" values.yaml
 
-                    helm upgrade --install myapp helm/ --values values.yaml --namespace dev --create-namespace
+                    helm upgrade --install myapp charts/ --values values.yaml --namespace dev --create-namespace
                     '''
                 }
             }
@@ -70,7 +70,7 @@ pipeline {
                     sed -i "s|repository:.*|repository: $DOCKER_ID/$DOCKER_IMAGE|" values.yaml
                     sed -i "s|tag:.*|tag: $DOCKER_TAG|" values.yaml
 
-                    helm upgrade --install myapp helm/ --values values.yaml --namespace qa --create-namespace
+                    helm upgrade --install myapp charts/ --values values.yaml --namespace qa --create-namespace
                     '''
                 }
             }
@@ -91,7 +91,7 @@ pipeline {
                     sed -i "s|repository:.*|repository: $DOCKER_ID/$DOCKER_IMAGE|" values.yaml
                     sed -i "s|tag:.*|tag: $DOCKER_TAG|" values.yaml
 
-                    helm upgrade --install myapp helm/ --values values.yaml --namespace staging --create-namespace
+                    helm upgrade --install myapp charts/ --values values.yaml --namespace staging --create-namespace
                     '''
                 }
             }
@@ -119,7 +119,7 @@ pipeline {
                     sed -i "s|repository:.*|repository: $DOCKER_ID/$DOCKER_IMAGE|" values.yaml
                     sed -i "s|tag:.*|tag: $DOCKER_TAG|" values.yaml
 
-                    helm upgrade --install myapp helm/ --values values.yaml --namespace prod --create-namespace
+                    helm upgrade --install myapp charts/ --values values.yaml --namespace prod --create-namespace
                     '''
                 }
             }
