@@ -2,6 +2,7 @@ pipeline {
     environment {
         DOCKER_ID = "cliffrubio"
         DOCKER_TAG = "v${BUILD_ID}"
+
     }
 
     agent any
@@ -104,7 +105,9 @@ pipeline {
 
         stage('Deploy to prod') {
             when {
-                branch 'master'
+                expression {
+                    return env.BRANCH_NAME == 'master' || env.GIT_BRANCH == 'master' || env.GIT_BRANCH == 'origin/master'
+                }
             }
             environment {
                 KUBECONFIG = credentials("config")
