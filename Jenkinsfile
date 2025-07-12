@@ -2,7 +2,6 @@ pipeline {
     environment {
         DOCKER_ID = "cliffrubio"
         DOCKER_TAG = "v${BUILD_ID}"
-        BRANCH_NAME = env.BRANCH_NAME ?: (env.GIT_BRANCH?.replaceFirst(/^origin\//, '') ?: '')
     }
 
     agent any
