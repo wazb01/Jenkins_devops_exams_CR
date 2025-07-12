@@ -28,7 +28,7 @@ spec:
       containers:
         - args:
             - uvicorn
-            - main:app
+            - app.main:app
             - --reload
             - --host
             - 0.0.0.0
@@ -44,12 +44,5 @@ spec:
               hostPort: 8002
               protocol: TCP
           resources: {}
-          volumeMounts:
-            - mountPath: /app
-              name: cast-service-claim0
       restartPolicy: Always
-      volumes:
-        - name: cast-service-claim0
-          persistentVolumeClaim:
-            claimName: cast-service-claim0
 status: {}
