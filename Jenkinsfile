@@ -4,6 +4,10 @@ pipeline {
         DOCKER_TAG = "v${BUILD_ID}"
     }
 
+    parameters {
+        booleanParam(name: 'DEPLOY_PROD', defaultValue: false, description: 'Manually trigger production deployment')
+    }
+
     agent any
 
     stages {
@@ -119,18 +123,15 @@ pipeline {
 
         stage('Deploy to prod') {
             when {
-                expression {
-                    return env.BRANCH_NAME == 'master'
+                allOf {
+                    expression { return env.BRANCH_NAME == 'master' }
+                    expression { return params.DEPLOY_PROD == true }
                 }
             }
             environment {
                 KUBECONFIG = credentials("config")
             }
             steps {
-                timeout(time: 15, unit: 'MINUTES') {
-                    input message: 'Do you want to deploy in production ?', ok: 'Yes'
-                }
-
                 script {
                     sh '''
                     rm -Rf .kube
