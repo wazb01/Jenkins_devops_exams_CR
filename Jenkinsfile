@@ -7,14 +7,20 @@ pipeline {
     agent any
 
     stages {
-        stage('Docker build & push - Cast Service') {
+        stage('Docker build - Cast service') {
+            steps {
+                sh '''
+                docker build -t $DOCKER_ID/cast-service:$DOCKER_TAG -t $DOCKER_ID/cast-service:latest cast-service/
+                '''
+            }
+        }
+
+        stage('Docker push - Cast service') {
             environment {
                 DOCKER_PASS = credentials("DOCKER_HUB_PASS")
             }
             steps {
                 sh '''
-                docker build -t $DOCKER_ID/cast-service:$DOCKER_TAG -t $DOCKER_ID/cast-service:latest cast-service/
-
                 docker login -u $DOCKER_ID -p $DOCKER_PASS
                 docker push $DOCKER_ID/cast-service:$DOCKER_TAG
                 docker push $DOCKER_ID/cast-service:latest
@@ -22,14 +28,20 @@ pipeline {
             }
         }
 
-        stage('Docker build & push - Movie Service') {
+        stage('Docker build - Movie service') {
+            steps {
+                sh '''
+                docker build -t $DOCKER_ID/movie-service:$DOCKER_TAG -t $DOCKER_ID/movie-service:latest movie-service/
+                '''
+            }
+        }
+
+        stage('Docker push - Movie service') {
             environment {
                 DOCKER_PASS = credentials("DOCKER_HUB_PASS")
             }
             steps {
                 sh '''
-                docker build -t $DOCKER_ID/movie-service:$DOCKER_TAG -t $DOCKER_ID/cast-service:latest cast-service/
-
                 docker login -u $DOCKER_ID -p $DOCKER_PASS
                 docker push $DOCKER_ID/movie-service:$DOCKER_TAG
                 docker push $DOCKER_ID/movie-service:latest
