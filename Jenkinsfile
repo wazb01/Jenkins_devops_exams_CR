@@ -44,9 +44,7 @@ pipeline {
         stage('Deploy') {
             when {
                 expression {
-                    return env.BRANCH_NAME in ['qa', 'staging', 'dev']
-                    || env.GIT_BRANCH in ['qa', 'staging', 'dev']
-                    || env.GIT_BRANCH in ['origin/qa', 'origin/staging', 'origin/dev']
+                    return env.BRANCH_NAME in ['qa', 'staging', 'dev'] || env.GIT_BRANCH in ['qa', 'staging', 'dev'] || env.GIT_BRANCH in ['origin/qa', 'origin/staging', 'origin/dev']
                 }
             }
             environment {
@@ -68,9 +66,7 @@ pipeline {
         stage('Deploy to prod') {
             when {
                 expression {
-                    return env.BRANCH_NAME == 'master'
-                    || env.GIT_BRANCH == 'master'
-                    || env.GIT_BRANCH == 'origin/master'
+                    return env.BRANCH_NAME == 'master' || env.GIT_BRANCH == 'master' || env.GIT_BRANCH == 'origin/master'
                 }
             }
             environment {
